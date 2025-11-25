@@ -4,7 +4,7 @@
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
 ![Docker Image Size](https://img.shields.io/docker/image-size/cateim/cups/latest?style=for-the-badge)
 
-Esta é uma imagem Docker multi-arquitetura do **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, construída sobre as bases mais recentes do **Ubuntu (Development)** e **Debian (Testing)**. O objetivo é fornecer um servidor de impressão com as versões mais recentes do CUPS, prontas para uso e fáceis de implantar.
+Esta é uma imagem Docker multi-arquitetura do **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, construída sobre as bases mais recentes do **Ubuntu (Development)** e **Debian (Testing)**. O objetivo é fornecer um servidor de impressão com as versões mais recentes do CUPS, prontas para uso e fáceis de implantar em ambientes containerizados.
 
 ## 📚 Código-Fonte
 
@@ -37,7 +37,9 @@ Este repositório constrói duas "trilhas" de imagem. A tag `latest` sempre apon
 
 ## ⚙️ Como Usar (Exemplo com `docker-compose.yml`)
 
-A forma recomendada de usar esta imagem é com o Portainer Stacks ou `docker-compose`. Crie um arquivo `docker-compose.yml` com o seguinte conteúdo:
+A forma recomendada de usar esta imagem é com o Portainer Stacks ou `docker-compose`. Crie um arquivo `docker-compose.yml` com o seguinte conteúdo.
+
+> **Nota:** Para impressoras USB funcionarem corretamente (detectar falta de papel, reconexão, etc.), o mapeamento dos volumes `/run/udev` e `/run/dbus` é **essencial**.
 
 ```yaml
 version: "3.8"
@@ -47,7 +49,7 @@ services:
     # Use 'latest' (Ubuntu), 'debian', ou tags de versão como '2.4.12'
     image: cateim/cups:latest
     container_name: cups
-    # Libera acesso total do container aos dispositivos do sistema
+    # Libera acesso total do container aos dispositivos do sistema (obrigatório para USB)
     privileged: true
     restart: unless-stopped
     environment:
@@ -56,26 +58,63 @@ services:
       # Define o fuso horário
       - TZ=America/Sao_Paulo
     volumes:
-      # Mapeia a pasta de configuração do CUPS para o seu sistema
+      # --- Configuração e Dados ---
       - /srv/cups/config:/etc/cups
-      # Mapeia a pasta de logs
       - /srv/cups/logs:/var/log/cups
-      # Mapeia a pasta da fila de impressão
       - /srv/cups/spool:/var/spool/cups
-      # Essencial para acesso a impressoras conectadas via USB no host
+      
+      # --- Hardware e Sistema (CRÍTICO PARA USB) ---
+      # Acesso físico às portas USB
       - /dev/bus/usb:/dev/bus/usb
-      # Essencial para descoberta de rede (Avahi)
-      - /var/run/dbus:/var/run/dbus
+      # Permite comunicação com serviços do sistema (corrige erros de ColorManager/DBus)
+      - /run/dbus:/run/dbus:ro
+      # Permite ao CUPS detectar eventos de hardware (ex: recolocar papel, abrir tampa)
+      - /run/udev:/run/udev:ro
+      
       # Sincroniza o relógio com o Host
       - /etc/localtime:/etc/localtime:ro
-    # 'host' é a forma mais fácil de garantir a descoberta de impressoras na rede (AirPrint)
+      
+    # 'host' é a forma mais fácil de garantir a descoberta de impressoras na rede (AirPrint/Bonjour)
+    # Se preferir 'bridge', certifique-se de expor a porta 631:631
     network_mode: host
 ```
 
 ### 🔑 Administração
 
-  - Para acessar a interface web, use o endereço: `http://<IP_DO_SEU_SERVIDOR>:631`
+  - Para acessar a interface web, use o endereço: `https://<IP_DO_SEU_SERVIDOR>:631`
   - Para acessar a área de **Administration**, use o login `admin` e a senha que você definiu na variável `ADMIN_PASSWORD`.
+
+---
+
+## 🐛 Solução de Problemas (USB e Impressoras "Host-Based")
+
+Se você utiliza impressoras USB que dependem de firmware carregado pelo host (como HP LaserJet P1102, P1005, série 1020, etc.), você pode notar que **desligar e ligar a impressora** faz com que o CUPS pare de responder ou deixe trabalhos como "Retidos".
+
+Isso ocorre porque o Container perde a referência do dispositivo USB quando a conexão elétrica cai.
+
+### Solução Definitiva (Regra UDEV no Host)
+
+Para que o Container reconecte automaticamente sempre que a impressora for reiniciada ou o cabo reconectado, crie uma regra `udev` no seu sistema hospedeiro (não no container).
+
+1.  Descubra o ID da sua impressora com o comando `lsusb` (ex: `03f0:002a`).
+2.  Crie o arquivo `/etc/udev/rules.d/99-fix-cups-usb.rules` com o conteúdo abaixo (substituindo pelo seu ID):
+
+<!-- end list -->
+
+```bash
+# Reinicia o container CUPS automaticamente ao detectar a conexão da impressora
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="SEU_VENDOR_ID", ATTR{idProduct}=="SEU_PRODUCT_ID", RUN+="/usr/bin/docker restart cups"
+```
+
+3.  Recarregue as regras: `udevadm control --reload-rules && udevadm trigger`
+
+### Dica Operacional (Falta de Papel)
+
+Se o papel acabar e o trabalho ficar retido, evite desligar a impressora.
+
+1.  Coloque o papel.
+2.  **Abra e feche a tampa do toner/cartucho.**
+3.  O volume `/run/udev` mapeado no container detectará o evento e o CUPS retomará a impressão automaticamente.
 
 ---
 
