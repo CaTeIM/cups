@@ -84,8 +84,6 @@ services:
   - Para acessar a interface web, use o endereço: `https://<IP_DO_SEU_SERVIDOR>:631`
   - Para acessar a área de **Administration**, use o login `admin` e a senha que você definiu na variável `ADMIN_PASSWORD`.
 
----
-
 ## 🐛 Solução de Problemas (USB e Impressoras "Host-Based")
 
 Se você utiliza impressoras USB que dependem de firmware carregado pelo host (como HP LaserJet P1102, P1005, série 1020, etc.), você pode notar que **desligar e ligar a impressora** faz com que o CUPS pare de responder ou deixe trabalhos como "Retidos".
