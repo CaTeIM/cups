@@ -1,119 +1,119 @@
-# Servidor de Impressão CUPS - Imagem Docker Multi-Arquitetura
+# 🐳 CUPS Print Server - Multi-Architecture Docker Image
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/cups-docker/cups.yml?branch=main&style=for-the-badge)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/docker-cups/cups.yml?branch=main&style=for-the-badge)
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
 ![Docker Image Size](https://img.shields.io/docker/image-size/cateim/cups/latest?style=for-the-badge)
 
-Esta é uma imagem Docker multi-arquitetura do **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, construída sobre as bases mais recentes do **Ubuntu (Development)** e **Debian (Testing)**. O objetivo é fornecer um servidor de impressão com as versões mais recentes do CUPS, prontas para uso e fáceis de implantar em ambientes containerizados.
+*[🇧🇷 Leia em Português](README.pt-br.md)*
 
-## 📚 Código-Fonte
+This is a multi-architecture Docker image of **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, built upon the latest **Ubuntu (Development)** and **Debian (Testing)** bases. The goal is to provide a print server with the latest CUPS versions, ready to use and easy to deploy in containerized environments.
 
-Este projeto é de código aberto. O `Dockerfile`, o script de inicialização e o workflow de build do GitHub Actions estão todos disponíveis no repositório do projeto.
+## 📚 Source Code
 
-➡️ **[Repositório no GitHub: CaTeIM/docker-cups](https://github.com/CaTeIM/docker-cups)**
+This is an open-source project. The `Dockerfile`, startup script, and GitHub Actions build workflow are all available in the project repository.
 
-## 🐳 Tags Disponíveis
+➡️ **[GitHub Repository: CaTeIM/docker-cups](https://github.com/CaTeIM/docker-cups)**
 
-Este repositório constrói duas "trilhas" de imagem. A tag `latest` sempre aponta para a base Ubuntu.
+## 🐳 Available Tags
 
-| Tag | Base da Distro | Versão CUPS | Estabilidade |
+This repository builds two image "tracks". The `latest` tag always points to the Ubuntu base.
+
+| Tag | Distro Base | CUPS Version | Stability |
 | :--- | :--- | :--- | :--- |
 | `latest`, `ubuntu`, `2.4.12` | Ubuntu 25.10 (Questing Quokka) | `2.4.12` | ⚠️ Development |
 | `debian`, `2.4.10` | Debian 13 (Trixie) | `2.4.10` | ⚠️ Testing |
 
-## ✨ Por que usar esta imagem?
+## ✨ Why use this image?
 
--   ✅ **Sempre Atualizado**: Utiliza o método de instalação `apt-get` a partir dos repositórios oficiais do Ubuntu 25.10 e Debian 13, garantindo as versões mais recentes do CUPS.
+-   ✅ **Always Up-to-Date**: Uses the `apt-get` installation method from the official Ubuntu 25.10 and Debian 13 repositories, ensuring the latest CUPS versions.
 
--   ✅ **Multi-Distro**: Escolha entre uma base Ubuntu (`latest`) ou Debian (`debian`), dependendo da sua preferência.
+-   ✅ **Multi-Distro**: Choose between an Ubuntu (`latest`) or Debian (`debian`) base, depending on your preference.
 
--   🔒 **Segura**: O processo de build inclui a aplicação de todas as atualizações de segurança disponíveis (`apt-get upgrade`).
+-   🔒 **Secure**: The build process includes applying all available security updates (`apt-get upgrade`).
 
--   🖨️ **Pronta para Uso**: Inclui um conjunto completo de drivers de impressão (`printer-driver-all`, `hplip`, `openprinting-ppds`), tornando a maioria das impressoras plug-and-play.
+-   🖨️ **Ready to Use**: Includes a comprehensive set of print drivers (`printer-driver-all`, `hplip`, `openprinting-ppds`), making most printers plug-and-play.
 
--   🚀 **Multi-Arquitetura**: Construída para rodar nativamente em `linux/amd64` (PCs, Servidores Intel/AMD) e `linux/arm64` (Raspberry Pi, Orange Pi 5, etc.).
+-   🚀 **Multi-Architecture**: Built to run natively on `linux/amd64` (PCs, Intel/AMD Servers) and `linux/arm64` (Raspberry Pi, Orange Pi 5, etc.).
 
--   🔧 **Configuração Inteligente**: Possui um script de inicialização que configura um usuário administrador e prepara o CUPS para acesso remoto na primeira execução.
+-   🔧 **Smart Configuration**: Features a startup script that sets up an admin user and prepares CUPS for remote access on the first run.
 
-## ⚙️ Como Usar (Exemplo com `docker-compose.yml`)
+## ⚙️ How to Use (Example with `docker-compose.yml`)
 
-A forma recomendada de usar esta imagem é com o Portainer Stacks ou `docker-compose`. Crie um arquivo `docker-compose.yml` com o seguinte conteúdo.
+The recommended way to use this image is with Portainer Stacks or `docker-compose`. Create a `docker-compose.yml` file with the following content.
 
-> **Nota:** Para impressoras USB funcionarem corretamente (detectar falta de papel, reconexão, etc.), o mapeamento dos volumes `/run/udev` e `/run/dbus` é **essencial**.
+> **Note:** For USB printers to work properly (detect out-of-paper, reconnection, etc.), mapping the `/run/udev` and `/run/dbus` volumes is **essential**.
 
 ```yaml
 version: "3.8"
 
 services:
   cups:
-    # Use 'latest' (Ubuntu), 'debian', ou tags de versão como '2.4.12'
+    # Use 'latest' (Ubuntu), 'debian', or version tags like '2.4.12'
     image: cateim/cups:latest
     container_name: cups
-    # Libera acesso total do container aos dispositivos do sistema (obrigatório para USB)
+    # Gives the container full access to system devices (mandatory for USB)
     privileged: true
     restart: unless-stopped
     environment:
-      # Defina aqui uma senha segura para o usuário 'admin' da interface web
-      - ADMIN_PASSWORD=sua_senha_forte
-      # Define o fuso horário
+      # Define a secure password for the 'admin' user on the web interface
+      - ADMIN_PASSWORD=your_strong_password
+      # Set your timezone
       - TZ=America/Sao_Paulo
     volumes:
-      # --- Configuração e Dados ---
+      # --- Configuration and Data ---
       - /srv/cups/config:/etc/cups
       - /srv/cups/logs:/var/log/cups
       - /srv/cups/spool:/var/spool/cups
       
-      # --- Hardware e Sistema (CRÍTICO PARA USB) ---
-      # Acesso físico às portas USB
+      # --- Hardware and System (CRITICAL FOR USB) ---
+      # Physical access to USB ports
       - /dev/bus/usb:/dev/bus/usb
-      # Permite comunicação com serviços do sistema (corrige erros de ColorManager/DBus)
+      # Allows communication with system services (fixes ColorManager/DBus errors)
       - /run/dbus:/run/dbus:ro
-      # Permite ao CUPS detectar eventos de hardware (ex: recolocar papel, abrir tampa)
+      # Allows CUPS to detect hardware events (e.g., reloading paper, opening cover)
       - /run/udev:/run/udev:ro
       
-      # Sincroniza o relógio com o Host
+      # Synchronize the clock with the Host
       - /etc/localtime:/etc/localtime:ro
       
-    # 'host' é a forma mais fácil de garantir a descoberta de impressoras na rede (AirPrint/Bonjour)
-    # Se preferir 'bridge', certifique-se de expor a porta 631:631
+    # 'host' is the easiest way to ensure printer discovery on the network (AirPrint/Bonjour)
+    # If you prefer 'bridge', make sure to expose port 631:631
     network_mode: host
 ```
 
-### 🔑 Administração
+### 🔑 Administration
 
-  - Para acessar a interface web, use o endereço: `https://<IP_DO_SEU_SERVIDOR>:631`
-  - Para acessar a área de **Administration**, use o login `admin` e a senha que você definiu na variável `ADMIN_PASSWORD`.
+  - To access the web interface, use the address: `https://<YOUR_SERVER_IP>:631`
+  - To access the **Administration** area, use the login `admin` and the password you defined in the `ADMIN_PASSWORD` variable.
 
-## 🐛 Solução de Problemas (USB e Impressoras "Host-Based")
+## 🐛 Troubleshooting (USB and "Host-Based" Printers)
 
-Se você utiliza impressoras USB que dependem de firmware carregado pelo host (como HP LaserJet P1102, P1005, série 1020, etc.), você pode notar que **desligar e ligar a impressora** faz com que o CUPS pare de responder ou deixe trabalhos como "Retidos".
+If you use USB printers that rely on host-loaded firmware (like HP LaserJet P1102, P1005, 1020 series, etc.), you might notice that **turning the printer off and on** causes CUPS to stop responding or leaves jobs as "Held".
 
-Isso ocorre porque o Container perde a referência do dispositivo USB quando a conexão elétrica cai.
+This happens because the Container loses the USB device reference when the electrical connection drops.
 
-### Solução Definitiva (Regra UDEV no Host)
+### Definitive Solution (Host UDEV Rule)
 
-Para que o Container reconecte automaticamente sempre que a impressora for reiniciada ou o cabo reconectado, crie uma regra `udev` no seu sistema hospedeiro (não no container).
+For the Container to automatically reconnect whenever the printer is restarted or the cable is reconnected, create a `udev` rule on your host system (not in the container).
 
-1.  Descubra o ID da sua impressora com o comando `lsusb` (ex: `03f0:002a`).
-2.  Crie o arquivo `/etc/udev/rules.d/99-fix-cups-usb.rules` com o conteúdo abaixo (substituindo pelo seu ID):
-
-<!-- end list -->
+1.  Find your printer's ID with the `lsusb` command (e.g., `03f0:002a`).
+2.  Create the `/etc/udev/rules.d/99-fix-cups-usb.rules` file with the content below (replacing with your ID):
 
 ```bash
-# Reinicia o container CUPS automaticamente ao detectar a conexão da impressora
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="SEU_VENDOR_ID", ATTR{idProduct}=="SEU_PRODUCT_ID", RUN+="/usr/bin/docker restart cups"
+# Automatically restarts the CUPS container upon detecting the printer connection
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="YOUR_VENDOR_ID", ATTR{idProduct}=="YOUR_PRODUCT_ID", RUN+="/usr/bin/docker restart cups"
 ```
 
-3.  Recarregue as regras: `udevadm control --reload-rules && udevadm trigger`
+3.  Reload the rules: `udevadm control --reload-rules && udevadm trigger`
 
-### Dica Operacional (Falta de Papel)
+### Operational Tip (Out of Paper)
 
-Se o papel acabar e o trabalho ficar retido, evite desligar a impressora.
+If you run out of paper and the job is held, avoid turning off the printer.
 
-1.  Coloque o papel.
-2.  **Abra e feche a tampa do toner/cartucho.**
-3.  O volume `/run/udev` mapeado no container detectará o evento e o CUPS retomará a impressão automaticamente.
+1.  Load the paper.
+2.  **Open and close the toner/cartridge cover.**
+3.  The mapped `/run/udev` volume in the container will detect the event and CUPS will automatically resume printing.
 
 ---
 
-*Este projeto não é oficialmente afiliado à OpenPrinting. Todo o crédito pelo CUPS vai para seus respectivos desenvolvedores.*
+*This project is not officially affiliated with OpenPrinting. All credit for CUPS goes to its respective developers.*
