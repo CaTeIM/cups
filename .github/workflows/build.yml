@@ -1,9 +1,13 @@
-name: build-and-push-cups
+name: Docker Publish
 
 on:
-#  push:
-#    branches: [ "master" ]
+  push:
+    paths:
+      - 'Dockerfile.*'
+      - '.github/workflows/**'
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 0' # Todo domingo às 03:00 UTC
 
 env:
   IMAGE_NAME: cateim/cups
@@ -11,21 +15,21 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     strategy:
-      fail-fast: false 
+      fail-fast: false
       matrix:
         include:
           # Build 1: Ubuntu (será o 'latest')
           - os: ubuntu
             dockerfile: Dockerfile.ubuntu
-            version_tag: 2.4.12 # Versão do CUPS no Ubuntu 25.10
-            
+            base_image: ubuntu:rolling
+
           # Build 2: Debian
           - os: debian
             dockerfile: Dockerfile.debian
-            version_tag: 2.4.10 # Versão do CUPS no Debian 13
-            
+            base_image: debian:trixie-slim
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,27 +48,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Etapa 1: GERAR as tags
+      - name: Descobre a versão real do CUPS direto no repositório
+        id: get_version
+        run: |
+          # Inicia um container rápido da base escolhida e recorta o número exato da versão do pacote
+          VERSION=$(docker run --rm ${{ matrix.base_image }} sh -c "apt-get update -qq >/dev/null && apt-cache show cups | grep -m1 '^Version:' | awk '{print \$2}' | sed 's/^[0-9]://' | cut -d'-' -f1")
+          echo "CUPS_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "A versão mais recente na base ${{ matrix.os }} é: $VERSION"
+
       - name: Gera as tags dinamicamente
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-
-            # Gera 'cateim/cups:latest' APENAS se matrix.os for 'ubuntu'
             type=raw,value=latest,enable=${{ matrix.os == 'ubuntu' }}
-
-            # Gera 'cateim/cups:sha-a1b2c3d'
-            type=sha,prefix=sha-,suffix=,format=short
-
-            # Gera 'cateim/cups:ubuntu' ou 'cateim/cups:debian'
             type=raw,value=${{ matrix.os }}
+            type=raw,value=${{ env.CUPS_VERSION }}
 
-            # Gera 'cateim/cups:2.4.12' ou 'cateim/cups:2.4.10'
-            type=raw,value=${{ matrix.version_tag }}
-
-      # Etapa 2: USAR as tags geradas no build
+      # Etapa 2: USAR as tags geradas no build (Com cache isolado por OS)
       - name: Build and push ${{ matrix.os }}
         uses: docker/build-push-action@v6
         with:
@@ -74,5 +76,5 @@ jobs:
           platforms: linux/amd64, linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.os }}
+          cache-to: type=gha,scope=${{ matrix.os }},mode=max
