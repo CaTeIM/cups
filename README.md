@@ -1,4 +1,4 @@
-# 🐳 CUPS Print Server - Multi-Architecture Docker Image
+# CUPS Print Server - Multi-Architecture Docker Image 🖨️🐳
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/docker-cups/cups.yml?branch=main&style=for-the-badge)
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
@@ -6,7 +6,7 @@
 
 *[🇧🇷 Leia em Português](README.pt-br.md)*
 
-This is a multi-architecture Docker image of **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, built upon the latest **Ubuntu (Development)** and **Debian (Testing)** bases. The goal is to provide a print server with the latest CUPS versions, ready to use and easy to deploy in containerized environments.
+This is a multi-architecture Docker image of **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, built upon the latest **Ubuntu (Rolling)** and **Debian (Testing)** bases. The goal is to provide a print server with the latest CUPS versions, ready to use and easy to deploy in containerized environments.
 
 ## 📚 Source Code
 
@@ -18,14 +18,16 @@ This is an open-source project. The `Dockerfile`, startup script, and GitHub Act
 
 This repository builds two image "tracks". The `latest` tag always points to the Ubuntu base.
 
-| Tag | Distro Base | CUPS Version | Stability |
-| :--- | :--- | :--- | :--- |
-| `latest`, `ubuntu`, `2.4.12` | Ubuntu 25.10 (Questing Quokka) | `2.4.12` | ⚠️ Development |
-| `debian`, `2.4.10` | Debian 13 (Trixie) | `2.4.10` | ⚠️ Testing |
+| Tag | Distro Base | CUPS Version |
+| :--- | :--- | :--- |
+| `latest`, `ubuntu`, `[version]` | Ubuntu (Rolling) | Dynamically updated |
+| `debian`, `[version]` | Debian 13 (Trixie) | Dynamically updated |
+
+*💡 **Note:** The `[version]` tags (e.g., `2.4.12`) are dynamically extracted from the upstream OS package manager. The images are automatically rebuilt every Sunday to ensure the latest CUPS version and security patches.*
 
 ## ✨ Why use this image?
 
--   ✅ **Always Up-to-Date**: Uses the `apt-get` installation method from the official Ubuntu 25.10 and Debian 13 repositories, ensuring the latest CUPS versions.
+-   ✅ **Always Up-to-Date**: Uses the `apt-get` installation method from the official Ubuntu Rolling and Debian 13 repositories. The image is automatically rebuilt every week to include the latest OS security patches and CUPS updates.
 
 -   ✅ **Multi-Distro**: Choose between an Ubuntu (`latest`) or Debian (`debian`) base, depending on your preference.
 
@@ -48,7 +50,7 @@ version: "3.8"
 
 services:
   cups:
-    # Use 'latest' (Ubuntu), 'debian', or version tags like '2.4.12'
+    # Use 'latest' (Ubuntu), 'debian', or dynamic version tags like '2.4.x'
     image: cateim/cups:latest
     container_name: cups
     # Gives the container full access to system devices (mandatory for USB)

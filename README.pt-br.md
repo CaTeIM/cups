@@ -1,4 +1,4 @@
-# 🐳 Servidor de Impressão CUPS - Imagem Docker Multi-Arquitetura
+# Servidor de Impressão CUPS - Imagem Docker Multi-Arquitetura 🖨️🐳
 
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/cups-docker/cups.yml?branch=main&style=for-the-badge)
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
@@ -6,7 +6,7 @@
 
 *[🇺🇸 Read in English](README.md)*
 
-Esta é uma imagem Docker multi-arquitetura do **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, construída sobre as bases mais recentes do **Ubuntu (Development)** e **Debian (Testing)**. O objetivo é fornecer um servidor de impressão com as versões mais recentes do CUPS, prontas para uso e fáceis de implantar em ambientes containerizados.
+Esta é uma imagem Docker multi-arquitetura do **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, construída sobre as bases mais recentes do **Ubuntu (Rolling)** e **Debian (Testing)**. O objetivo é fornecer um servidor de impressão com as versões mais recentes do CUPS, prontas para uso e fáceis de implantar em ambientes containerizados.
 
 ## 📚 Código-Fonte
 
@@ -18,14 +18,16 @@ Este projeto é de código aberto. O `Dockerfile`, o script de inicialização e
 
 Este repositório constrói duas "trilhas" de imagem. A tag `latest` sempre aponta para a base Ubuntu.
 
-| Tag | Base da Distro | Versão CUPS | Estabilidade |
-| :--- | :--- | :--- | :--- |
-| `latest`, `ubuntu`, `2.4.12` | Ubuntu 25.10 (Questing Quokka) | `2.4.12` | ⚠️ Development |
-| `debian`, `2.4.10` | Debian 13 (Trixie) | `2.4.10` | ⚠️ Testing |
+| Tag | Base da Distro | Versão CUPS |
+| :--- | :--- | :--- |
+| `latest`, `ubuntu`, `[versão]` | Ubuntu (Rolling) | Atualizada dinamicamente |
+| `debian`, `[versão]` | Debian 13 (Trixie) | Atualizada dinamicamente |
+
+*💡 **Nota:** As tags de versão (ex: `2.4.12`) são extraídas dinamicamente do gerenciador de pacotes do SO. As imagens são reconstruídas automaticamente todo domingo para garantir a versão mais recente do CUPS e patches de segurança.*
 
 ## ✨ Por que usar esta imagem?
 
--   ✅ **Sempre Atualizado**: Utiliza o método de instalação `apt-get` a partir dos repositórios oficiais do Ubuntu 25.10 e Debian 13, garantindo as versões mais recentes do CUPS.
+-   ✅ **Sempre Atualizado**: Utiliza o método de instalação `apt-get` a partir dos repositórios oficiais do Ubuntu Rolling e Debian 13. A imagem é reconstruída automaticamente todo domingo para incluir os patches de segurança do SO e atualizações mais recentes do CUPS.
 
 -   ✅ **Multi-Distro**: Escolha entre uma base Ubuntu (`latest`) ou Debian (`debian`), dependendo da sua preferência.
 
@@ -46,7 +48,7 @@ A forma recomendada de usar esta imagem é com o Portainer Stacks ou `docker-com
 ```yaml
 services:
   cups:
-    # Use 'latest' (Ubuntu), 'debian', ou tags de versão como '2.4.12'
+    # Use 'latest' (Ubuntu), 'debian', ou tags dinâmicas de versão como '2.4.x'
     image: cateim/cups:latest
     container_name: cups
     # Libera acesso total do container aos dispositivos do sistema (obrigatório para USB)
