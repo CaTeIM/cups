@@ -1,6 +1,6 @@
 # CUPS Print Server - Multi-Architecture Docker Image 🖨️🐳
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/docker-cups/cups.yml?branch=main&style=for-the-badge)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/cups/build.yml?branch=master&style=for-the-badge)
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
 ![Docker Image Size](https://img.shields.io/docker/image-size/cateim/cups/latest?style=for-the-badge)
 
@@ -12,7 +12,7 @@ This is a multi-architecture Docker image of **[CUPS (Common Unix Printing Syste
 
 This is an open-source project. The `Dockerfile`, startup script, and GitHub Actions build workflow are all available in the project repository.
 
-➡️ **[GitHub Repository: CaTeIM/docker-cups](https://github.com/CaTeIM/docker-cups)**
+➡️ **[GitHub Repository: CaTeIM/cups](https://github.com/CaTeIM/cups)**
 
 ## 🐳 Available Tags
 
@@ -46,8 +46,6 @@ The recommended way to use this image is with Portainer Stacks or `docker-compos
 > **Note:** For USB printers to work properly (detect out-of-paper, reconnection, etc.), mapping the `/run/udev` and `/run/dbus` volumes is **essential**.
 
 ```yaml
-version: "3.8"
-
 services:
   cups:
     # Use 'latest' (Ubuntu), 'debian', or dynamic version tags like '2.4.x'
@@ -66,7 +64,6 @@ services:
       - /srv/cups/config:/etc/cups
       - /srv/cups/logs:/var/log/cups
       - /srv/cups/spool:/var/spool/cups
-      
       # --- Hardware and System (CRITICAL FOR USB) ---
       # Physical access to USB ports
       - /dev/bus/usb:/dev/bus/usb
@@ -74,13 +71,14 @@ services:
       - /run/dbus:/run/dbus:ro
       # Allows CUPS to detect hardware events (e.g., reloading paper, opening cover)
       - /run/udev:/run/udev:ro
-      
       # Synchronize the clock with the Host
       - /etc/localtime:/etc/localtime:ro
-      
     # 'host' is the easiest way to ensure printer discovery on the network (AirPrint/Bonjour)
     # If you prefer 'bridge', make sure to expose port 631:631
-    network_mode: host
+    ports:
+      - "631:631"
+    network_mode: bridge
+    hostname: cups
 ```
 
 ### 🔑 Administration

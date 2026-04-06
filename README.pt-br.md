@@ -1,6 +1,6 @@
 # Servidor de Impressão CUPS - Imagem Docker Multi-Arquitetura 🖨️🐳
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/cups-docker/cups.yml?branch=main&style=for-the-badge)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CaTeIM/cups/build.yml?branch=master&style=for-the-badge)
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
 ![Docker Image Size](https://img.shields.io/docker/image-size/cateim/cups/latest?style=for-the-badge)
 
@@ -12,7 +12,7 @@ Esta é uma imagem Docker multi-arquitetura do **[CUPS (Common Unix Printing Sys
 
 Este projeto é de código aberto. O `Dockerfile`, o script de inicialização e o workflow de build do GitHub Actions estão todos disponíveis no repositório do projeto.
 
-➡️ **[Repositório no GitHub: CaTeIM/docker-cups](https://github.com/CaTeIM/docker-cups)**
+➡️ **[Repositório no GitHub: CaTeIM/cups](https://github.com/CaTeIM/cups)**
 
 ## 🐳 Tags Disponíveis
 
@@ -64,7 +64,6 @@ services:
       - /srv/cups/config:/etc/cups
       - /srv/cups/logs:/var/log/cups
       - /srv/cups/spool:/var/spool/cups
-      
       # --- Hardware e Sistema (CRÍTICO PARA USB) ---
       # Acesso físico às portas USB
       - /dev/bus/usb:/dev/bus/usb
@@ -72,13 +71,14 @@ services:
       - /run/dbus:/run/dbus:ro
       # Permite ao CUPS detectar eventos de hardware (ex: recolocar papel, abrir tampa)
       - /run/udev:/run/udev:ro
-      
       # Sincroniza o relógio com o Host
       - /etc/localtime:/etc/localtime:ro
-      
     # 'host' é a forma mais fácil de garantir a descoberta de impressoras na rede (AirPrint/Bonjour)
     # Se preferir 'bridge', certifique-se de expor a porta 631:631
-    network_mode: host
+    ports:
+      - "631:631"
+    network_mode: bridge
+    hostname: cups
 ```
 
 ### 🔑 Administração

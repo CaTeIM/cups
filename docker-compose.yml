@@ -1,0 +1,21 @@
+services:
+  cups:
+    image: cateim/cups:latest
+    container_name: cups
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - ADMIN_PASSWORD=YourStrongPassword
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /srv/cups/config:/etc/cups
+      - /srv/cups/logs:/var/log/cups
+      - /srv/cups/spool:/var/spool/cups
+      - /dev/bus/usb:/dev/bus/usb
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+      - /run/udev:/run/udev:ro
+    ports:
+      - "631:631"
+    network_mode: bridge
+    hostname: cups
