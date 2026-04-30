@@ -56,18 +56,40 @@ jobs:
           echo "CUPS_VERSION=$VERSION" >> $GITHUB_ENV
           echo "A versão mais recente na base ${{ matrix.os }} é: $VERSION"
 
+      - name: Verifica se o build é necessário
+        id: check_needed
+        run: |
+          # Em push/workflow_dispatch, sempre reconstrói. No schedule, verifica se a versão mudou.
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "BUILD_NEEDED=true" >> $GITHUB_OUTPUT
+            echo "Evento '${{ github.event_name }}': build forçado."
+            exit 0
+          fi
+
+          # Consulta o Docker Hub para ver se a tag "<versão>-<os>" já existe
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/${{ env.CUPS_VERSION }}-${{ matrix.os }}")
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "BUILD_NEEDED=false" >> $GITHUB_OUTPUT
+            echo "Versão ${{ env.CUPS_VERSION }}-${{ matrix.os }} já publicada. Pulando build."
+          else
+            echo "BUILD_NEEDED=true" >> $GITHUB_OUTPUT
+            echo "Versão ${{ env.CUPS_VERSION }}-${{ matrix.os }} não encontrada. Build necessário."
+          fi
+
       - name: Gera as tags dinamicamente
         id: meta
+        if: steps.check_needed.outputs.BUILD_NEEDED == 'true'
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ matrix.os == 'ubuntu' }}
-            type=raw,value=${{ matrix.os }}
-            type=raw,value=${{ env.CUPS_VERSION }}
+            type=raw,value=${{ env.CUPS_VERSION }}-${{ matrix.os }}
 
-      # Etapa 2: USAR as tags geradas no build (Com cache isolado por OS)
       - name: Build and push ${{ matrix.os }}
+        if: steps.check_needed.outputs.BUILD_NEEDED == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .

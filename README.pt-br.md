@@ -20,16 +20,16 @@ Este repositório constrói duas "trilhas" de imagem. A tag `latest` sempre apon
 
 | Tag | Base da Distro | Versão CUPS |
 | :--- | :--- | :--- |
-| `latest`, `ubuntu`, `[versão]` | Ubuntu (Rolling) | Atualizada dinamicamente |
-| `debian`, `[versão]` | Debian 13 (Trixie) | Atualizada dinamicamente |
+| `latest`, `[versão]-ubuntu` | Ubuntu (Rolling) | Atualizada dinamicamente |
+| `[versão]-debian` | Debian 13 (Trixie) | Atualizada dinamicamente |
 
-*💡 **Nota:** As tags de versão (ex: `2.4.12`) são extraídas dinamicamente do gerenciador de pacotes do SO. As imagens são reconstruídas automaticamente todo domingo para garantir a versão mais recente do CUPS e patches de segurança.*
+*💡 **Nota:** As tags de versão (ex: `2.4.12-ubuntu`, `2.4.12-debian`) são extraídas dinamicamente do gerenciador de pacotes do SO. As imagens são reconstruídas automaticamente todo domingo — mas somente quando uma nova versão do CUPS estiver disponível.*
 
 ## ✨ Por que usar esta imagem?
 
 -   ✅ **Sempre Atualizado**: Utiliza o método de instalação `apt-get` a partir dos repositórios oficiais do Ubuntu Rolling e Debian 13. A imagem é reconstruída automaticamente todo domingo para incluir os patches de segurança do SO e atualizações mais recentes do CUPS.
 
--   ✅ **Multi-Distro**: Escolha entre uma base Ubuntu (`latest`) ou Debian (`debian`), dependendo da sua preferência.
+-   ✅ **Multi-Distro**: Escolha entre uma base Ubuntu (`latest`, `2.x.x-ubuntu`) ou Debian (`2.x.x-debian`), dependendo da sua preferência.
 
 -   🔒 **Segura**: O processo de build inclui a aplicação de todas as atualizações de segurança disponíveis (`apt-get upgrade`).
 
@@ -48,7 +48,7 @@ A forma recomendada de usar esta imagem é com o Portainer Stacks ou `docker-com
 ```yaml
 services:
   cups:
-    # Use 'latest' (Ubuntu), 'debian', ou tags dinâmicas de versão como '2.4.x'
+    # Use 'latest' (Ubuntu) ou tags de versão como '2.4.x-ubuntu' / '2.4.x-debian'
     image: cateim/cups:latest
     container_name: cups
     # Libera acesso total do container aos dispositivos do sistema (obrigatório para USB)

@@ -4,7 +4,7 @@
 ![Docker Hub Pulls](https://img.shields.io/docker/pulls/cateim/cups?style=for-the-badge)
 ![Docker Image Size](https://img.shields.io/docker/image-size/cateim/cups/latest?style=for-the-badge)
 
-*[🇧🇷 Leia em Português](README.pt-br.md)*
+*[🇧🇷 Leia em Português](https://github.com/CaTeIM/cups/blob/master/README.pt-br.md)*
 
 This is a multi-architecture Docker image of **[CUPS (Common Unix Printing System)](https://github.com/OpenPrinting/cups)**, built upon the latest **Ubuntu (Rolling)** and **Debian (Testing)** bases. The goal is to provide a print server with the latest CUPS versions, ready to use and easy to deploy in containerized environments.
 
@@ -20,16 +20,16 @@ This repository builds two image "tracks". The `latest` tag always points to the
 
 | Tag | Distro Base | CUPS Version |
 | :--- | :--- | :--- |
-| `latest`, `ubuntu`, `[version]` | Ubuntu (Rolling) | Dynamically updated |
-| `debian`, `[version]` | Debian 13 (Trixie) | Dynamically updated |
+| `latest`, `[version]-ubuntu` | Ubuntu (Rolling) | Dynamically updated |
+| `[version]-debian` | Debian 13 (Trixie) | Dynamically updated |
 
-*💡 **Note:** The `[version]` tags (e.g., `2.4.12`) are dynamically extracted from the upstream OS package manager. The images are automatically rebuilt every Sunday to ensure the latest CUPS version and security patches.*
+*💡 **Note:** The `[version]` tags (e.g., `2.4.12-ubuntu`, `2.4.12-debian`) are dynamically extracted from the upstream OS package manager. The images are automatically rebuilt every Sunday — but only when a new CUPS version is available.*
 
 ## ✨ Why use this image?
 
 -   ✅ **Always Up-to-Date**: Uses the `apt-get` installation method from the official Ubuntu Rolling and Debian 13 repositories. The image is automatically rebuilt every week to include the latest OS security patches and CUPS updates.
 
--   ✅ **Multi-Distro**: Choose between an Ubuntu (`latest`) or Debian (`debian`) base, depending on your preference.
+-   ✅ **Multi-Distro**: Choose between an Ubuntu (`latest`, `2.x.x-ubuntu`) or Debian (`2.x.x-debian`) base, depending on your preference.
 
 -   🔒 **Secure**: The build process includes applying all available security updates (`apt-get upgrade`).
 
@@ -48,7 +48,7 @@ The recommended way to use this image is with Portainer Stacks or `docker-compos
 ```yaml
 services:
   cups:
-    # Use 'latest' (Ubuntu), 'debian', or dynamic version tags like '2.4.x'
+    # Use 'latest' (Ubuntu) or version-specific tags like '2.4.x-ubuntu' / '2.4.x-debian'
     image: cateim/cups:latest
     container_name: cups
     # Gives the container full access to system devices (mandatory for USB)
