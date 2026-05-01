@@ -70,12 +70,13 @@ jobs:
         run: |
           TAG="${CUPS_VER}-${OS_NAME}"
 
-          # Consulta com retry exponencial; só aceita 200 ou 404 como respostas válidas
+          # Consulta com retry exponencial; só aceita 200 ou 404 como respostas válidas.
           check_tag() {
             local url="$1"
             local status="000"
             for attempt in 1 2 3 4; do
-              status=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 30 "$url" 2>/dev/null || echo "000")
+              status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$url" 2>/dev/null)
+              [ -z "$status" ] && status="000"
               if [ "$status" = "200" ] || [ "$status" = "404" ]; then
                 echo "$status"
                 return 0
