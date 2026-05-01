@@ -136,8 +136,12 @@ jobs:
             echo "Tag '$TAG' já publicada e sincronizada com 'latest' (quando aplicável). Pulando build."
           else
             echo "BUILD_NEEDED=true" >> $GITHUB_OUTPUT
-            [ "$VERSION_STATUS" = "404" ] && echo "Tag '$TAG' ausente. Build necessário."
-            [ "$LATEST_OK" = "false" ] && echo "$LATEST_REASON. Build do ubuntu necessário para ressincronizar 'latest'."
+            if [ "$VERSION_STATUS" = "404" ]; then
+              echo "Tag '$TAG' ausente. Build necessário."
+            fi
+            if [ "$LATEST_OK" = "false" ]; then
+              echo "$LATEST_REASON. Build do ubuntu necessário para ressincronizar 'latest'."
+            fi
           fi
 
       - name: Gera as tags dinamicamente
