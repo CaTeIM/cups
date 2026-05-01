@@ -33,6 +33,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -51,31 +53,90 @@ jobs:
       - name: Descobre a versão real do CUPS direto no repositório
         id: get_version
         run: |
-          # Inicia um container rápido da base escolhida e recorta o número exato da versão do pacote
           VERSION=$(docker run --rm ${{ matrix.base_image }} sh -c "apt-get update -qq >/dev/null && apt-cache show cups | grep -m1 '^Version:' | awk '{print \$2}' | sed 's/^[0-9]://' | cut -d'-' -f1")
-          echo "CUPS_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "cups_version=$VERSION" >> $GITHUB_OUTPUT
           echo "A versão mais recente na base ${{ matrix.os }} é: $VERSION"
 
       - name: Verifica se o build é necessário
         id: check_needed
+        env:
+          REPO: ${{ env.IMAGE_NAME }}
+          OS_NAME: ${{ matrix.os }}
+          DOCKERFILE_NAME: ${{ matrix.dockerfile }}
+          CUPS_VER: ${{ steps.get_version.outputs.cups_version }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
-          # Em push/workflow_dispatch, sempre reconstrói. No schedule, verifica se a versão mudou.
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "BUILD_NEEDED=true" >> $GITHUB_OUTPUT
-            echo "Evento '${{ github.event_name }}': build forçado."
-            exit 0
+          TAG="${CUPS_VER}-${OS_NAME}"
+
+          # Consulta com retry exponencial; só aceita 200 ou 404 como respostas válidas
+          check_tag() {
+            local url="$1"
+            local status="000"
+            for attempt in 1 2 3 4; do
+              status=$(curl -fsS -o /dev/null -w "%{http_code}" --max-time 30 "$url" 2>/dev/null || echo "000")
+              if [ "$status" = "200" ] || [ "$status" = "404" ]; then
+                echo "$status"
+                return 0
+              fi
+              echo "Tentativa $attempt em $url falhou (status: $status). Aguardando $((attempt * 5))s..." >&2
+              sleep $((attempt * 5))
+            done
+            echo "$status"
+            return 1
+          }
+
+          # Ponto 4: se o Dockerfile mudou neste push, força o build
+          if [ "$EVENT_NAME" = "push" ] && [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            CHANGED=$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" 2>/dev/null || echo "")
+            if echo "$CHANGED" | grep -qx "$DOCKERFILE_NAME"; then
+              echo "BUILD_NEEDED=true" >> $GITHUB_OUTPUT
+              echo "$DOCKERFILE_NAME foi modificado neste push. Build forçado."
+              exit 0
+            fi
           fi
 
-          # Consulta o Docker Hub para ver se a tag "<versão>-<os>" já existe
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "https://hub.docker.com/v2/repositories/${{ env.IMAGE_NAME }}/tags/${{ env.CUPS_VERSION }}-${{ matrix.os }}")
+          # Ponto 1: verifica tag versionada com tratamento de erro robusto
+          VERSION_STATUS=$(check_tag "https://hub.docker.com/v2/repositories/${REPO}/tags/${TAG}") || {
+            echo "::error::Falha ao consultar Docker Hub para tag '$TAG' após 4 tentativas (último status: $VERSION_STATUS)."
+            exit 1
+          }
 
-          if [ "$HTTP_STATUS" = "200" ]; then
+          # Ponto 2: para ubuntu, 'latest' tem que apontar para o MESMO digest do '<v>-ubuntu'.
+          # Se estiver ausente OU dessincronizado, força rebuild (que republica os dois juntos).
+          LATEST_OK=true
+          LATEST_REASON=""
+          if [ "$OS_NAME" = "ubuntu" ]; then
+            LATEST_STATUS=$(check_tag "https://hub.docker.com/v2/repositories/${REPO}/tags/latest") || {
+              echo "::error::Falha ao consultar 'latest' após 4 tentativas (último status: $LATEST_STATUS)."
+              exit 1
+            }
+
+            if [ "$LATEST_STATUS" = "404" ]; then
+              LATEST_OK=false
+              LATEST_REASON="tag 'latest' ausente"
+            elif [ "$VERSION_STATUS" = "200" ]; then
+              VERSION_DIGEST=$(curl -fsS --max-time 30 "https://hub.docker.com/v2/repositories/${REPO}/tags/${TAG}" 2>/dev/null | jq -r '.digest // ""')
+              LATEST_DIGEST=$(curl -fsS --max-time 30 "https://hub.docker.com/v2/repositories/${REPO}/tags/latest" 2>/dev/null | jq -r '.digest // ""')
+              if [ -z "$VERSION_DIGEST" ] || [ -z "$LATEST_DIGEST" ]; then
+                LATEST_OK=false
+                LATEST_REASON="não foi possível ler digests para comparar"
+              elif [ "$VERSION_DIGEST" != "$LATEST_DIGEST" ]; then
+                LATEST_OK=false
+                LATEST_REASON="'latest' dessincronizado de '$TAG' (digests divergentes)"
+              fi
+            fi
+          fi
+
+          # Decisão
+          if [ "$VERSION_STATUS" = "200" ] && [ "$LATEST_OK" = "true" ]; then
             echo "BUILD_NEEDED=false" >> $GITHUB_OUTPUT
-            echo "Versão ${{ env.CUPS_VERSION }}-${{ matrix.os }} já publicada. Pulando build."
+            echo "Tag '$TAG' já publicada e sincronizada com 'latest' (quando aplicável). Pulando build."
           else
             echo "BUILD_NEEDED=true" >> $GITHUB_OUTPUT
-            echo "Versão ${{ env.CUPS_VERSION }}-${{ matrix.os }} não encontrada. Build necessário."
+            [ "$VERSION_STATUS" = "404" ] && echo "Tag '$TAG' ausente. Build necessário."
+            [ "$LATEST_OK" = "false" ] && echo "$LATEST_REASON. Build do ubuntu necessário para ressincronizar 'latest'."
           fi
 
       - name: Gera as tags dinamicamente
@@ -86,7 +147,7 @@ jobs:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable=${{ matrix.os == 'ubuntu' }}
-            type=raw,value=${{ env.CUPS_VERSION }}-${{ matrix.os }}
+            type=raw,value=${{ steps.get_version.outputs.cups_version }}-${{ matrix.os }}
 
       - name: Build and push ${{ matrix.os }}
         if: steps.check_needed.outputs.BUILD_NEEDED == 'true'
@@ -100,3 +161,55 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.os }}
           cache-to: type=gha,scope=${{ matrix.os }},mode=max
+
+  cleanup:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove tags antigas do Docker Hub
+        env:
+          REPO: ${{ env.IMAGE_NAME }}
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          # Obtém JWT do Docker Hub (PAT funciona como senha aqui)
+          JWT=$(curl -fsS -H "Content-Type: application/json" \
+            -X POST -d "{\"username\":\"${DH_USER}\",\"password\":\"${DH_TOKEN}\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          if [ -z "$JWT" ] || [ "$JWT" = "null" ]; then
+            echo "::error::Falha ao autenticar no Docker Hub para limpeza."
+            exit 1
+          fi
+
+          PAGE=1
+          REMOVED=0
+          while :; do
+            RESPONSE=$(curl -fsS "https://hub.docker.com/v2/repositories/${REPO}/tags?page_size=100&page=${PAGE}")
+            TAGS=$(echo "$RESPONSE" | jq -r '.results[]?.name')
+            [ -z "$TAGS" ] && break
+
+            while IFS= read -r TAG; do
+              # Padrões antigos: 'ubuntu' / 'debian' puros, versão sem sufixo (ex: 2.4.12), e sha-*
+              if [[ "$TAG" =~ ^(ubuntu|debian)$ ]] \
+                 || [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+                 || [[ "$TAG" =~ ^sha- ]]; then
+                STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+                  -X DELETE -H "Authorization: JWT $JWT" \
+                  "https://hub.docker.com/v2/repositories/${REPO}/tags/${TAG}/")
+                if [ "$STATUS" = "204" ]; then
+                  echo "Removida tag antiga: $TAG"
+                  REMOVED=$((REMOVED + 1))
+                else
+                  echo "Falha ao remover '$TAG' (status: $STATUS)"
+                fi
+              fi
+            done <<< "$TAGS"
+
+            NEXT=$(echo "$RESPONSE" | jq -r '.next')
+            [ "$NEXT" = "null" ] && break
+            PAGE=$((PAGE + 1))
+          done
+
+          echo "Limpeza concluída. Tags removidas: $REMOVED"
